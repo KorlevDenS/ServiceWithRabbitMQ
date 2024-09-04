@@ -23,8 +23,22 @@ public class MqttConfig {
 
     private final String MQTT_BROKER_URL;
 
-    public MqttConfig(@Value("tcp://localRabbitMQ:1883") String mqttBrokerUrl) {
+    private final String userName;
+
+    private final String password;
+
+    private final String queueName;
+
+    public MqttConfig(
+            @Value("tcp://localRabbitMQ:1883") String mqttBrokerUrl,
+            @Value("${spring.rabbitmq.username}") String userName,
+            @Value("${spring.rabbitmq.password}") String password,
+            @Value("${spring.rabbitmq.template.exchange}") String queueName
+    ) {
         this.MQTT_BROKER_URL = mqttBrokerUrl;
+        this.userName = userName;
+        this.password = password;
+        this.queueName = queueName;
     }
 
     @Bean
@@ -32,8 +46,8 @@ public class MqttConfig {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
         MqttConnectOptions options = new MqttConnectOptions();
 
-        options.setPassword("password".toCharArray());
-        options.setUserName("user");
+        options.setPassword(password.toCharArray());
+        options.setUserName(userName);
 
         options.setServerURIs(new String[] {MQTT_BROKER_URL});
         factory.setConnectionOptions(options);
@@ -51,12 +65,12 @@ public class MqttConfig {
         MqttPahoMessageHandler messageHandler =
                 new MqttPahoMessageHandler("example_data_sender_client", mqttClientFactory());
         messageHandler.setAsync(true);
-        messageHandler.setDefaultTopic("exampleQueue");
+        messageHandler.setDefaultTopic(queueName);
         return messageHandler;
     }
 
     @MessagingGateway(defaultRequestChannel = "mqttOutboundChannel")
     public interface MqttDataSenderGateway {
-        void sendToMqtt(String data, @Header(MqttHeaders.TOPIC) String topic);
+        void sendToMqtt(String data, @Header(MqttHeaders.TOPIC) String topicBindingKey);
     }
 }
